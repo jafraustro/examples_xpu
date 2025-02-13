@@ -23,6 +23,8 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
+parser.add_argument('--xpu', action='store_true',
+                    help='Enable XPU')
 parser.add_argument('--mps', action='store_true', default=False,
                         help='enables macOS GPU training')
 parser.add_argument('--temperature', type=float, default=1.0,
@@ -39,12 +41,18 @@ if torch.cuda.is_available():
 if torch.backends.mps.is_available():
     if not args.mps:
         print("WARNING: You have mps device, to enable macOS GPU run with --mps.")
+if torch.xpu.is_available():
+    if not args.xpu:
+        print("WARNING: You have XPU device, to enable XPU run with --xpu.")
         
 use_mps = args.mps and torch.backends.mps.is_available()
+use_xpu = args.xpu and torch.xpu.is_available()
 if args.cuda:
     device = torch.device("cuda")
 elif use_mps:
     device = torch.device("mps")
+elif use_xpu:
+    device = torch.device("xpu")
 else:
     device = torch.device("cpu")
 
@@ -52,7 +60,7 @@ if args.temperature < 1e-3:
     parser.error("--temperature has to be greater or equal 1e-3.")
 
 with open(args.checkpoint, 'rb') as f:
-    model = torch.load(f, map_location=device)
+    model = torch.load(f, map_location=device, weights_only=False)
 model.eval()
 
 corpus = data.Corpus(args.data)

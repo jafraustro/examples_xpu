@@ -28,14 +28,7 @@ def check_paths(args):
         sys.exit(1)
 
 
-def train(args):
-    if args.cuda:
-        device = torch.device("cuda")
-    elif args.mps:
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
-
+def train(args,device):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
@@ -124,9 +117,8 @@ def train(args):
     print("\nDone, trained model saved at", save_model_path)
 
 
-def stylize(args):
-    device = torch.device("cuda" if args.cuda else "cpu")
-
+def stylize(args,device):
+    
     content_image = utils.load_image(args.content_image, scale=args.content_scale)
     content_transform = transforms.Compose([
         transforms.ToTensor(),
@@ -140,7 +132,7 @@ def stylize(args):
     else:
         with torch.no_grad():
             style_model = TransformerNet()
-            state_dict = torch.load(args.model)
+            state_dict = torch.load(args.model, weights_only=True)
             # remove saved deprecated running_* keys in InstanceNorm from the checkpoint
             for k in list(state_dict.keys()):
                 if re.search(r'in\d+\.running_(mean|var)$', k):
@@ -205,8 +197,10 @@ def main():
                                   help="size of training images, default is 256 X 256")
     train_arg_parser.add_argument("--style-size", type=int, default=None,
                                   help="size of style-image, default is the original size of style image")
-    train_arg_parser.add_argument("--cuda", type=int, required=True,
-                                  help="set it to 1 for running on GPU, 0 for CPU")
+    train_arg_parser.add_argument('--no-cuda', action='store_true', default=False,
+                                  help="disables Cuda training")
+    train_arg_parser.add_argument('--no-xpu', action='store_true', default=False,
+                                  help="disables XPU for training")
     train_arg_parser.add_argument("--seed", type=int, default=42,
                                   help="random seed for training")
     train_arg_parser.add_argument("--content-weight", type=float, default=1e5,
@@ -219,6 +213,7 @@ def main():
                                   help="number of images after which the training loss is logged, default is 500")
     train_arg_parser.add_argument("--checkpoint-interval", type=int, default=2000,
                                   help="number of batches after which a checkpoint of the trained model will be created")
+    train_arg_parser.add_argument('--mps', action='store_true', default=False, help='enable macOS GPU training')
 
     eval_arg_parser = subparsers.add_parser("eval", help="parser for evaluation/stylizing arguments")
     eval_arg_parser.add_argument("--content-image", type=str, required=True,
@@ -229,28 +224,42 @@ def main():
                                  help="path for saving the output image")
     eval_arg_parser.add_argument("--model", type=str, required=True,
                                  help="saved model to be used for stylizing the image. If file ends in .pth - PyTorch path is used, if in .onnx - Caffe2 path")
-    eval_arg_parser.add_argument("--cuda", type=int, default=False,
-                                 help="set it to 1 for running on cuda, 0 for CPU")
+    eval_arg_parser.add_argument('--no-cuda', action='store_true', default=False,
+                                 help="disables Cuda evaluation")
+    eval_arg_parser.add_argument('--no-xpu', action="store_true", default=False,
+                                 help="disables XPU evaluation")
     eval_arg_parser.add_argument("--export_onnx", type=str,
                                  help="export ONNX model to a given file")
     eval_arg_parser.add_argument('--mps', action='store_true', default=False, help='enable macOS GPU training')
 
     args = main_arg_parser.parse_args()
 
+    use_cuda = not args.no_cuda and torch.cuda.is_available()
+    use_xpu = not args.no_xpu and torch.xpu.is_available()
+    if use_cuda:
+        device = torch.device("cuda")
+    elif use_xpu:
+        device = torch.device("xpu")
+    elif args.mps:
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
+    print ("Device in use: ", device)
+
+
     if args.subcommand is None:
         print("ERROR: specify either train or eval")
         sys.exit(1)
-    if args.cuda and not torch.cuda.is_available():
-        print("ERROR: cuda is not available, try running on CPU")
-        sys.exit(1)
+    
     if not args.mps and torch.backends.mps.is_available():
         print("WARNING: mps is available, run with --mps to enable macOS GPU")
 
     if args.subcommand == "train":
-        check_paths(args)
-        train(args)
+        check_paths(args,device)
+        train(args,device)
     else:
-        stylize(args)
+        stylize(args,device)
 
 
 if __name__ == "__main__":

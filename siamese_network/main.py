@@ -249,6 +249,8 @@ def main():
                         help='Learning rate step gamma (default: 0.7)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
+    parser.add_argument('--no-xpu', action='store_true', default=False,
+                        help='disables XPU training')
     parser.add_argument('--no-mps', action='store_true', default=False,
                         help='disables macOS GPU training')
     parser.add_argument('--dry-run', action='store_true', default=False,
@@ -262,16 +264,21 @@ def main():
     args = parser.parse_args()
     
     use_cuda = not args.no_cuda and torch.cuda.is_available()
+    use_xpu = not args.no_xpu and torch.xpu.is_available()
     use_mps = not args.no_mps and torch.backends.mps.is_available()
 
     torch.manual_seed(args.seed)
 
     if use_cuda:
         device = torch.device("cuda")
+    elif use_xpu:
+        device = torch.device("xpu")
     elif use_mps:
         device = torch.device("mps")
     else:
         device = torch.device("cpu")
+    
+    print('Device to use: ', device)
 
     train_kwargs = {'batch_size': args.batch_size}
     test_kwargs = {'batch_size': args.test_batch_size}

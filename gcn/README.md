@@ -27,7 +27,7 @@ The GCN model architecture follows the details provided in the paper. It consist
 ## Usage
 To train and evaluate the GCN model on the Cora dataset, use the following command:
 ```bash
-python train.py --epochs 200 --lr 0.01 --l2 5e-4 --dropout-p 0.5 --hidden-dim 16 --val-every 20 --include-bias False --no-cuda False
+python train.py --epochs 200 --lr 0.01 --l2 5e-4 --dropout-p 0.5 --hidden-dim 16 --val-every 20
 ```
 
 # Results

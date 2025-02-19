@@ -163,7 +163,8 @@ def load_cora(path='./cora', device='cpu'):
 
     adj_mat = degree_mat @ adj_mat @ degree_mat # Apply the renormalization trick
 
-    return features.to_sparse().to(device), labels.to(device), adj_mat.to_sparse().to(device)
+    # return features.to_sparse().to(device), labels.to(device), adj_mat.to_sparse().to(device)
+    return features.to(device), labels.to(device), adj_mat.to(device)
 
 
 def train_iter(epoch, model, optimizer, criterion, input, target, mask_train, mask_val, print_every=10):
@@ -214,13 +215,15 @@ if __name__ == '__main__':
                         help='dimension of the hidden representation (default: 16)')
     parser.add_argument('--val-every', type=int, default=20,
                         help='epochs to wait for print training and validation evaluation (default: 20)')
-    parser.add_argument('--include-bias', action='store_true', default=False,
+    parser.add_argument('--include-bias', action='store_true',
                         help='use bias term in convolutions (default: False)')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
+    parser.add_argument('--no-cuda', action='store_true'
                         help='disables CUDA training')
-    parser.add_argument('--no-mps', action='store_true', default=False,
+    parser.add_argument('--no-xpu', action='store_true'
+                        help='disables XPU training')
+    parser.add_argument('--no-mps', action='store_true',
                         help='disables macOS GPU training')
-    parser.add_argument('--dry-run', action='store_true', default=False,
+    parser.add_argument('--dry-run', action='store_true',
                         help='quickly check a single pass')
     parser.add_argument('--seed', type=int, default=42, metavar='S',
                         help='random seed (default: 42)')
@@ -228,6 +231,7 @@ if __name__ == '__main__':
 
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     use_mps = not args.no_mps and torch.backends.mps.is_available()
+    use_xpu = not args.no_xpu and torch.xpu.is_available()
 
     torch.manual_seed(args.seed)
 
@@ -235,6 +239,8 @@ if __name__ == '__main__':
         device = torch.device('cuda')
     elif use_mps:
         device = torch.device('mps')
+    elif use_xpu:
+        device = torch.device('xpu')
     else:
         device = torch.device('cpu')
     print(f'Using {device} device')

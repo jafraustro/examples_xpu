@@ -3,11 +3,13 @@ import argparse
 import torch
 from PIL import Image
 from torchvision.transforms import ToTensor
+from model import Net
 
 import numpy as np
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch Super Res Example')
+parser.add_argument('--upscale_factor', type=int, required=True, help="super resolution upscale factor")
 parser.add_argument('--input_image', type=str, required=True, help='input image to use')
 parser.add_argument('--model', type=str, required=True, help='model file to use')
 parser.add_argument('--output_filename', type=str, help='where to save the output image')
@@ -19,7 +21,8 @@ print(opt)
 img = Image.open(opt.input_image).convert('YCbCr')
 y, cb, cr = img.split()
 
-model = torch.load(opt.model, weights_only=False)
+model = Net(upscale_factor=opt.upscale_factor)
+model.load_state_dict(torch.load(opt.model))
 img_to_tensor = ToTensor()
 input = img_to_tensor(y).view(1, -1, y.size[1], y.size[0])
 

@@ -20,12 +20,13 @@ parser.add_argument('--workers', type=int, help='number of data loading workers'
 parser.add_argument('--batchSize', type=int, default=64, help='input batch size')
 parser.add_argument('--imageSize', type=int, default=64, help='the height / width of the input image to network')
 parser.add_argument('--nz', type=int, default=100, help='size of the latent z vector')
-parser.add_argument('--ngf', type=int, default=64)
-parser.add_argument('--ndf', type=int, default=64)
+parser.add_argument('--ngf', type=int, default=64, help='number of generator filters')
+parser.add_argument('--ndf', type=int, default=64, help='number of discriminator filters')
 parser.add_argument('--niter', type=int, default=25, help='number of epochs to train for')
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate, default=0.0002')
 parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
 parser.add_argument('--cuda', action='store_true', default=False, help='enables cuda')
+parser.add_argument('--xpu', action='store_true', default=False, help='enables XPU training')
 parser.add_argument('--dry-run', action='store_true', help='check a single training cycle works')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
 parser.add_argument('--netG', default='', help="path to netG (to continue training)")
@@ -56,6 +57,9 @@ if torch.cuda.is_available() and not opt.cuda:
 
 if torch.backends.mps.is_available() and not opt.mps:
     print("WARNING: You have mps device, to enable macOS GPU run with --mps")
+  
+if torch.xpu.is_available() and not opt.xpu:
+    print("WARNING: You have XPU device, to enable XPU training run with --xpu")
   
 if opt.dataroot is None and str(opt.dataset).lower() != 'fake':
     raise ValueError("`dataroot` parameter is required for dataset \"%s\"" % opt.dataset)
@@ -107,12 +111,17 @@ assert dataset
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize,
                                          shuffle=True, num_workers=int(opt.workers))
 use_mps = opt.mps and torch.backends.mps.is_available()
+use_xpu = opt.xpu and torch.xpu.is_available()
+
 if opt.cuda:
     device = torch.device("cuda:0")
 elif use_mps:
     device = torch.device("mps")
+elif use_xpu:
+    device = torch.device("xpu")
 else:
     device = torch.device("cpu")
+
 
 ngpu = int(opt.ngpu)
 nz = int(opt.nz)
@@ -160,6 +169,8 @@ class Generator(nn.Module):
     def forward(self, input):
         if input.is_cuda and self.ngpu > 1:
             output = nn.parallel.data_parallel(self.main, input, range(self.ngpu))
+        if input.is_xpu and self.ngpu > 1:
+            output = nn.DataParallel(self.main, input, range(self.ngpu))
         else:
             output = self.main(input)
         return output
@@ -200,6 +211,8 @@ class Discriminator(nn.Module):
     def forward(self, input):
         if input.is_cuda and self.ngpu > 1:
             output = nn.parallel.data_parallel(self.main, input, range(self.ngpu))
+        if input.is_xpu and self.ngpu > 1:
+            output = nn.DataParallel(self.main, input, range(self.ngpu))
         else:
             output = self.main(input)
 

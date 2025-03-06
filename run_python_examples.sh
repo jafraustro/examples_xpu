@@ -32,7 +32,7 @@ esac
 
 function dcgan() {
   start
-  python main.py --dataset fake $CUDA_FLAG --mps --dry-run || error "dcgan failed"
+  python main.py --dataset fake --accel --dry-run || error "dcgan failed"
 }
 
 function fast_neural_style() {

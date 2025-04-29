@@ -8,6 +8,8 @@ import argparse
 import torch
 
 import data
+import model
+
 
 parser = argparse.ArgumentParser(description='PyTorch Wikitext-2 Language Model')
 # Model parameters.
@@ -23,12 +25,28 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
+parser.add_argument('--xpu', action='store_true',
+                    help='Enable XPU')
 parser.add_argument('--mps', action='store_true', default=False,
                         help='enables macOS GPU training')
 parser.add_argument('--temperature', type=float, default=1.0,
                     help='temperature - higher will increase diversity')
 parser.add_argument('--log-interval', type=int, default=100,
                     help='reporting interval')
+parser.add_argument('--model', type=str, default='LSTM',
+                    help='type of network (RNN_TANH, RNN_RELU, LSTM, GRU, Transformer)')
+parser.add_argument('--emsize', type=int, default=200,
+                    help='size of word embeddings')
+parser.add_argument('--nhead', type=int, default=2,
+                    help='the number of heads in the encoder/decoder of the transformer model')
+parser.add_argument('--nhid', type=int, default=200,
+                    help='number of hidden units per layer')
+parser.add_argument('--nlayers', type=int, default=2,
+                    help='number of layers')
+parser.add_argument('--dropout', type=float, default=0.2,
+                    help='dropout applied to layers (0 = no dropout)')
+parser.add_argument('--tied', action='store_true',
+                    help='tie the word embedding and softmax weights')
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
@@ -39,24 +57,35 @@ if torch.cuda.is_available():
 if torch.backends.mps.is_available():
     if not args.mps:
         print("WARNING: You have mps device, to enable macOS GPU run with --mps.")
+if torch.xpu.is_available():
+    if not args.xpu:
+        print("WARNING: You have XPU device, to enable XPU run with --xpu.")
         
 use_mps = args.mps and torch.backends.mps.is_available()
+use_xpu = args.xpu and torch.xpu.is_available()
 if args.cuda:
     device = torch.device("cuda")
 elif use_mps:
     device = torch.device("mps")
+elif use_xpu:
+    device = torch.device("xpu")
 else:
     device = torch.device("cpu")
 
 if args.temperature < 1e-3:
     parser.error("--temperature has to be greater or equal 1e-3.")
 
-with open(args.checkpoint, 'rb') as f:
-    model = torch.load(f, map_location=device)
-model.eval()
-
 corpus = data.Corpus(args.data)
 ntokens = len(corpus.dictionary)
+
+if args.model == 'Transformer':
+    model = model.TransformerModel(ntokens, args.emsize, args.nhead, args.nhid, args.nlayers, args.dropout).to(device)
+else:
+    model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied).to(device)
+
+with open(args.checkpoint, 'rb') as f:
+    model.load_state_dict(torch.load(f, map_location=device, weights_only=False))
+model.eval()
 
 is_transformer_model = hasattr(model, 'model_type') and model.model_type == 'Transformer'
 if not is_transformer_model:

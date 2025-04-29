@@ -5,10 +5,12 @@ The trained model can then be used by the generate script to generate new text.
 
 ```bash
 python main.py --cuda --epochs 6           # Train a LSTM on Wikitext-2 with CUDA.
+python main.py --xpu --epochs 6           # Train a LSTM on Wikitext-2 with Intel XPU.
 python main.py --cuda --epochs 6 --tied    # Train a tied LSTM on Wikitext-2 with CUDA.
 python main.py --cuda --tied               # Train a tied LSTM on Wikitext-2 with CUDA for 40 epochs.
 python main.py --cuda --epochs 6 --model Transformer --lr 5
                                            # Train a Transformer model on Wikitext-2 with CUDA.
+python main.py --xpu --epochs 6 --model Transformer --lr 5
 
 python generate.py                         # Generate samples from the default model checkpoint.
 ```
@@ -36,6 +38,7 @@ optional arguments:
   --tied                tie the word embedding and softmax weights
   --seed SEED           random seed
   --cuda                use CUDA
+  --xpu                 use Intel XPU
   --mps                 enable GPU on macOS
   --log-interval N      report interval
   --save SAVE           path to save the final model
@@ -53,4 +56,5 @@ python main.py --cuda --emsize 650 --nhid 650 --dropout 0.5 --epochs 40
 python main.py --cuda --emsize 650 --nhid 650 --dropout 0.5 --epochs 40 --tied
 python main.py --cuda --emsize 1500 --nhid 1500 --dropout 0.65 --epochs 40
 python main.py --cuda --emsize 1500 --nhid 1500 --dropout 0.65 --epochs 40 --tied
+python main.py --xpu --emsize 1500 --nhid 1500 --dropout 0.65 --epochs 40 --tied
 ```

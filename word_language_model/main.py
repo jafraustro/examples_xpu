@@ -41,6 +41,8 @@ parser.add_argument('--cuda', action='store_true', default=False,
                     help='use CUDA')
 parser.add_argument('--mps', action='store_true', default=False,
                         help='enables macOS GPU training')
+parser.add_argument('--xpu', action='store_true', default=False,
+                    help='Enables XPU usage')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
 parser.add_argument('--save', type=str, default='model.pt',
@@ -61,12 +63,18 @@ if torch.cuda.is_available():
 if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     if not args.mps:
         print("WARNING: You have mps device, to enable macOS GPU run with --mps.")
+if torch.xpu.is_available():
+    if not args.xpu:
+        print("WARNING: You have XPU device, to enable XPU run with --xpu.")
 
 use_mps = args.mps and torch.backends.mps.is_available()
+use_xpu = args.xpu and torch.xpu.is_available()
 if args.cuda:
     device = torch.device("cuda")
 elif use_mps:
     device = torch.device("mps")
+elif use_xpu:
+    device = torch.device("xpu")
 else:
     device = torch.device("cpu")
 
@@ -229,10 +237,10 @@ try:
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
                                            val_loss, math.exp(val_loss)))
         print('-' * 89)
-        # Save the model if the validation loss is the best we've seen so far.
+        # Save model's state_dict if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
             with open(args.save, 'wb') as f:
-                torch.save(model, f)
+                torch.save(model.state_dict(), f)
             best_val_loss = val_loss
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
@@ -243,7 +251,7 @@ except KeyboardInterrupt:
 
 # Load the best saved model.
 with open(args.save, 'rb') as f:
-    model = torch.load(f)
+    model.load_state_dict(torch.load(f))
     # after load the rnn params are not a continuous chunk of memory
     # this makes them a continuous chunk, and will speed up forward pass
     # Currently, only rnn model supports flatten_parameters function.

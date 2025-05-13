@@ -141,12 +141,12 @@ def main_worker(gpu, ngpus_per_node, args):
     use_accel = not args.no_accel and torch.accelerator.is_available()
 
     if use_accel:
+        if args.gpu is not None:
+            torch.accelerator.set_device_index(args.gpu)
+            print("Use GPU: {} for training".format(args.gpu))
         device = torch.accelerator.current_accelerator()
     else:
         device = torch.device("cpu")
-
-    if args.gpu is not None:
-        print("Use GPU: {} for training".format(args.gpu))
 
     if args.distributed:
         if args.dist_url == "env://" and args.rank == -1:
@@ -173,8 +173,8 @@ def main_worker(gpu, ngpus_per_node, args):
         # DistributedDataParallel will use all available devices.
         if device.type == 'cuda':
             if args.gpu is not None:
-                torch.accelerator.set_device_index(args.gpu)
-                model.to(device)
+                torch.cuda.set_device(args.gpu)
+                model.cuda(device)
                 # When using a single GPU per process and per
                 # DistributedDataParallel, we need to divide the batch size
                 # ourselves based on the total number of GPUs of the current node.
@@ -186,19 +186,15 @@ def main_worker(gpu, ngpus_per_node, args):
                 # DistributedDataParallel will divide and allocate batch_size to all
                 # available GPUs if device_ids are not set
                 model = torch.nn.parallel.DistributedDataParallel(model)
-
-    elif args.gpu is not None and device.type=='cuda':
-        torch.accelerator.set_device_index(args.gpu)
-        model.to(device)
-    elif device.type != 'cuda':
-        model.to(device)
-    else:
+    elif device.type == 'cuda':
         # DataParallel will divide and allocate batch_size to all available GPUs
         if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
             model.features = torch.nn.DataParallel(model.features)
             model.cuda()
         else:
             model = torch.nn.DataParallel(model).cuda()
+    else:
+        model.to(device)
 
     # define loss function (criterion), optimizer, and learning rate scheduler
     criterion = nn.CrossEntropyLoss().to(device)
@@ -216,9 +212,9 @@ def main_worker(gpu, ngpus_per_node, args):
             print("=> loading checkpoint '{}'".format(args.resume))
             if args.gpu is None:
                 checkpoint = torch.load(args.resume)
-            elif device.type=='cuda':
+            else:
                 # Map model to be loaded to specified single gpu.
-                loc = 'cuda:{}'.format(args.gpu)
+                loc = f'{device.type}:{args.gpu}'
                 checkpoint = torch.load(args.resume, map_location=loc)
             args.start_epoch = checkpoint['epoch']
             best_acc1 = checkpoint['best_acc1']

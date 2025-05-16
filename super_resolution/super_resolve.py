@@ -17,6 +17,8 @@ opt = parser.parse_args()
 print(opt)
 if opt.accel:
     device = torch.accelerator.current_accelerator()
+else:
+    device = torch.device("cpu")
 
 img = Image.open(opt.input_image).convert('YCbCr')
 y, cb, cr = img.split()

@@ -2,7 +2,7 @@
 
 ```bash
 pip install -r requirements.txt
-python main.py
+python main.py --accel
 ```
 
 The main.py script accepts the following arguments:
@@ -16,11 +16,10 @@ optional arguments:
   --lr LR               learning rate (default: 0.03)
   --momentum            SGD momentum (default: 0.5)
   --seed SEED           random seed (default: 1)
-  --mps                 enables macos GPU training
   --save_model          For saving the current Model
   --log_interval        how many batches to wait before logging training status
   --num_process         how many training processes to use (default: 2)
-  --cuda                enables CUDA training
+  --accel               enables accelerator
   --dry-run             quickly check a single pass
   --save-model          For Saving the current Model
 ```

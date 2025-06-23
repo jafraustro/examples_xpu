@@ -9,12 +9,13 @@ import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 
-def setup(rank, world_size):
+def setup(rank, vendor_backend, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
 
     # initialize the process group
-    dist.init_process_group("gloo", rank=rank, world_size=world_size)
+    torch.accelerator.set_device_index(rank)
+    dist.init_process_group(rank=rank, world_size=world_size, backend=vendor_backend)
 
 
 def cleanup():
@@ -32,9 +33,9 @@ class ToyModel(nn.Module):
         return self.net2(self.relu(self.net1(x)))
 
 
-def demo_basic(rank, world_size):
+def demo_basic(rank, vendor_backend, world_size):
     print(f"Running basic DDP example on rank {rank}.")
-    setup(rank, world_size)
+    setup(rank, vendor_backend, world_size)
 
     # create model and move it to GPU with id rank
     model = ToyModel().to(rank)
@@ -52,16 +53,15 @@ def demo_basic(rank, world_size):
     cleanup()
 
 
-def run_demo(demo_fn, world_size):
+def run_demo(demo_fn, vendor_backend, world_size):
     mp.spawn(demo_fn,
-             args=(world_size,),
+             args=(vendor_backend, world_size),
              nprocs=world_size,
              join=True)
 
-
-def demo_checkpoint(rank, world_size):
+def demo_checkpoint(rank, vendor_backend, world_size):
     print(f"Running DDP checkpoint example on rank {rank}.")
-    setup(rank, world_size)
+    setup(rank, vendor_backend, world_size)
 
     model = ToyModel().to(rank)
     ddp_model = DDP(model, device_ids=[rank])
@@ -80,7 +80,8 @@ def demo_checkpoint(rank, world_size):
     # 0 saves it.
     dist.barrier()
     # configure map_location properly
-    map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
+    acc = torch.accelerator.current_accelerator()
+    map_location = {f'{acc}:0': f'{acc}:{rank}'}
     ddp_model.load_state_dict(
         torch.load(CHECKPOINT_PATH, map_location=map_location))
 
@@ -117,9 +118,9 @@ class ToyMpModel(nn.Module):
         return self.net2(x)
 
 
-def demo_model_parallel(rank, world_size):
+def demo_model_parallel(rank, vendor_backend, world_size):
     print(f"Running DDP with model parallel example on rank {rank}.")
-    setup(rank, world_size)
+    setup(rank, vendor_backend, world_size)
 
     # setup mp_model and devices for this process
     dev0 = rank * 2
@@ -141,10 +142,12 @@ def demo_model_parallel(rank, world_size):
 
 
 if __name__ == "__main__":
-    n_gpus = torch.cuda.device_count()
+    acc = torch.accelerator.current_accelerator()
+    vendor_backend = torch.distributed.get_default_backend_for_device(acc)
+    n_gpus = torch.accelerator.device_count()
     if n_gpus < 8:
         print(f"Requires at least 8 GPUs to run, but got {n_gpus}.")
     else:
-        run_demo(demo_basic, 8)
-        run_demo(demo_checkpoint, 8)
-        run_demo(demo_model_parallel, 4)
+        run_demo(demo_basic, vendor_backend, 8)
+        run_demo(demo_checkpoint, vendor_backend, 8)
+        run_demo(demo_model_parallel, vendor_backend, 4)

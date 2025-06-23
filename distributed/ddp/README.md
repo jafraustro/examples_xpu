@@ -85,7 +85,7 @@ if __name__ == "__main__":
     spmd_main()
 ```
 
-In `spmd_main`, the process group is initialized with just the backend (NCCL or Gloo). The rest of the information needed for rendezvous comes from environment variables set by `torchrun`:
+In `spmd_main`, the process group is initialized with just the backend using the Acelerator API. The rest of the information needed for rendezvous comes from environment variables set by `torchrun`:
 
 ```py
 def spmd_main():
@@ -98,12 +98,11 @@ def spmd_main():
     local_rank = int(env_dict['LOCAL_RANK'])
     local_world_size = int(env_dict['LOCAL_WORLD_SIZE'])
 
-    print(f"[{os.getpid()}] Initializing process group with: {env_dict}")
-    dist.init_process_group(backend="nccl")
-    print(
-        f"[{os.getpid()}] world_size = {dist.get_world_size()}, "
-        + f"rank = {dist.get_rank()}, backend={dist.get_backend()}"
-    )
+    print(f"[{os.getpid()}] Initializing process group with: {env_dict}")  
+    acc = torch.accelerator.current_accelerator()
+    vendor_backend = torch.distributed.get_default_backend_for_device(acc)
+    torch.accelerator.set_device_index(rank)
+    dist.init_process_group(backend=vendor_backend)
 
     demo_basic(rank)
 

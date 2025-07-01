@@ -10,8 +10,12 @@ import hydra
 
 
 def ddp_setup():
-    init_process_group(backend="nccl")
-    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
+    acc = torch.accelerator.current_accelerator()
+    rank = int(os.environ["LOCAL_RANK"])
+    device: torch.device = torch.device(f"{acc}:{rank}")
+    backend = torch.distributed.get_default_backend_for_device(device)
+    init_process_group(backend=backend)
+    torch.accelerator.set_device_index(rank)
 
 def get_train_objs(gpt_cfg: GPTConfig, opt_cfg: OptimizerConfig, data_cfg: DataConfig):
     dataset = CharDataset(data_cfg)
@@ -20,7 +24,7 @@ def get_train_objs(gpt_cfg: GPTConfig, opt_cfg: OptimizerConfig, data_cfg: DataC
 
     gpt_cfg.vocab_size = dataset.vocab_size
     gpt_cfg.block_size = dataset.block_size
-    model = GPT(gpt_cfg)
+    model = GPT(gpt_cfg).to(torch.accelerator.current_accelerator())
     optimizer = create_optimizer(model, opt_cfg)
     
     return model, optimizer, train_set, test_set

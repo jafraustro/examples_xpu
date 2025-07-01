@@ -1,5 +1,5 @@
-torch>=1.11.0
-fsspec
+torch>=2.8
+fsspec  # This package comes with `pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/xpu` should I remove it?
 boto3
 hydra-core
 requests

@@ -17,6 +17,6 @@ def rank_log(_rank, logger, msg):
 
 def verify_min_gpu_count(min_gpus: int = 2) -> bool:
     """ verification that we have at least 2 gpus to run dist examples """
-    has_cuda = torch.cuda.is_available()
-    gpu_count = torch.cuda.device_count()
-    return has_cuda and gpu_count >= min_gpus
+    has_acc = torch.accelerator.is_available()
+    gpu_count = torch.accelerator.device_count()
+    return has_acc and gpu_count >= min_gpus

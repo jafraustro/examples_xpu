@@ -71,21 +71,22 @@ PyTorch native APIs.
 logger = get_logger()
 
 # create a device mesh based on the given world_size.
-_world_size = int(os.environ["WORLD_SIZE"])
+world_size = int(os.environ["WORLD_SIZE"])
 
-device_mesh = init_device_mesh(device_type="cuda", mesh_shape=(_world_size,))
-_rank = device_mesh.get_rank()
+device = torch.accelerator.current_accelerator()
+device_mesh = init_device_mesh(device_type=device.type, mesh_shape=(world_size,))
+rank = device_mesh.get_rank()
 
 
-print(f"Starting PyTorch TP example on rank {_rank}.")
+print(f"Starting PyTorch TP example on rank {rank}.")
 assert (
-    _world_size % 2 == 0
-), f"TP examples require even number of GPUs, but got {_world_size} gpus"
+    world_size % 2 == 0
+), f"TP examples require even number of GPUs, but got {world_size} gpus"
 
-rank_log(_rank, logger, f"Device Mesh created: {device_mesh=}")
+rank_log(rank, logger, f"Device Mesh created: {device_mesh=}")
 
-# create model and move it to GPU - init"cuda"_mesh has already mapped GPU ids.
-tp_model = ToyModel().to("cuda")
+# create model and move it to GPU - init_device_mesh has already mapped GPU ids.
+tp_model = ToyModel().to(rank)
 
 
 # Custom parallelization plan for the model
@@ -106,16 +107,16 @@ optimizer = torch.optim.AdamW(tp_model.parameters(), lr=lr, foreach=True)
 # Perform a num of iterations of forward/backward
 # and optimizations for the sharded module.
 num_iters = 10
-rank_log(_rank, logger, "Tensor Parallel training starting...")
+rank_log(rank, logger, "Tensor Parallel training starting...")
 
 for i in range(num_iters):
     # For TP, input needs to be same across all TP ranks.
     # Setting the random seed is to mimic the behavior of dataloader.
     torch.manual_seed(i)
-    inp = torch.rand(20, 10, device="cuda")
+    inp = torch.rand(20, 10, device=f'{device}:{rank}')
     output = tp_model(inp)
     output.sum().backward()
     optimizer.step()
-    rank_log(_rank, logger, f"Tensor Parallel iter {i} completed")
+    rank_log(rank, logger, f"Tensor Parallel iter {i} completed")
 
-rank_log(_rank, logger, "Tensor Parallel training completed!")
+rank_log(rank, logger, "Tensor Parallel training completed!")

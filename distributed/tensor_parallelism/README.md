@@ -10,7 +10,25 @@ PyTorch native Tensor Parallel APIs, which include:
 More details about the PyTorch native Tensor Parallel APIs, please see PyTorch docs:
 https://pytorch.org/docs/stable/distributed.tensor.parallel.html
 
-```
+## Installation
+
+```bash
 pip install -r requirements.txt
-python example.py
 ```
+
+## Running Examples
+
+You can run the examples using `torchrun` to launch distributed training:
+
+```bash
+# Simple Tensor Parallel example
+torchrun --nnodes=1 --nproc_per_node=4 tensor_parallel_mlp.py
+
+# Tensor Parallel with Sequence Parallel
+torchrun --nnodes=1 --nproc_per_node=4 tensor_parallel_with_sequence_parallel.py
+
+# FSDP + Tensor Parallel with Llama2 model
+torchrun --nnodes=1 --nproc_per_node=4 fsdp_with_tp_example.py
+```
+
+For more details, check the `run_examples.sh` script.

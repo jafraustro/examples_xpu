@@ -22,9 +22,11 @@ def get_train_objs(gpt_cfg: GPTConfig, opt_cfg: OptimizerConfig, data_cfg: DataC
     train_len = int(len(dataset) * data_cfg.train_split)
     train_set, test_set = random_split(dataset, [train_len, len(dataset) - train_len])
 
+    rank = int(os.environ["LOCAL_RANK"])
+
     gpt_cfg.vocab_size = dataset.vocab_size
     gpt_cfg.block_size = dataset.block_size
-    model = GPT(gpt_cfg).to(torch.accelerator.current_accelerator())
+    model = GPT(gpt_cfg).to(rank)
     optimizer = create_optimizer(model, opt_cfg)
     
     return model, optimizer, train_set, test_set

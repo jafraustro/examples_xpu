@@ -98,7 +98,7 @@ class Trainer:
 
 
     def _run_batch(self, source, targets, train: bool = True) -> float:
-        with torch.set_grad_enabled(train), torch.autocast(device_type=self.device_type, dtype=torch.float16, enabled=(self.config.use_amp)):
+        with torch.set_grad_enabled(train), torch.amp.autocast(device_type=self.device_type, dtype=torch.float16, enabled=(self.config.use_amp)):
             _, loss = self.model(source, targets)
         
         if train:

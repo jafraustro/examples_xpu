@@ -62,10 +62,7 @@ class Trainer:
         self.optimizer = optimizer        
         self.save_every = self.config.save_every
         if self.config.use_amp:
-            if self.acc == "cuda":
-                self.scaler = torch.cuda.amp.GradScaler()
-            else:
-                self.scaler = torch.cpu.amp.GradScaler()
+            self.scaler = torch.amp.GradScaler()
 
         # load snapshot if available. only necessary on the first node.
         if self.config.snapshot_path is None:

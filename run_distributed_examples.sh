@@ -61,6 +61,7 @@ function distributed_minGPT() {
 function run_all() {
   run distributed/tensor_parallelism
   run distributed/ddp
+  run distributed/minGPT-ddp
 }
 
 # by default, run all examples

@@ -54,7 +54,7 @@ function distributed_ddp() {
     uv run main.py || error "ddp example failed"
 }
 
-function distributed_minGPT() {
+function distributed_minGPT-ddp() {
   uv run bash run_example.sh mingpt/main.py || error "minGPT example failed"
 }
 

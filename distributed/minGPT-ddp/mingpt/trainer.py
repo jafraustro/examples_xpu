@@ -63,7 +63,6 @@ class Trainer:
         self.save_every = self.config.save_every
         if self.config.use_amp:
             self.scaler = torch.amp.GradScaler(self.device_type)
-
         # load snapshot if available. only necessary on the first node.
         if self.config.snapshot_path is None:
             self.config.snapshot_path = "snapshot.pt"

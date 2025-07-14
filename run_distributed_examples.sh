@@ -54,9 +54,19 @@ function distributed_ddp() {
     uv run main.py || error "ddp example failed"
 }
 
+function distributed_rpc_ddp_rpc() {
+    uv run main.py || error "ddp_rpc example failed"
+}
+
+function distributed_rpc_rnn() {
+    uv run main.py || error "rpc_rnn example failed"
+}
+
 function run_all() {
   run distributed/tensor_parallelism
   run distributed/ddp
+  run distributed/rpc/ddp_rpc
+  run distributed/rpc/rnn
 }
 
 # by default, run all examples

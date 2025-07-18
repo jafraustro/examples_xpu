@@ -15,7 +15,27 @@ Each code file extends upon the previous one. The series starts with a non-distr
     * [slurm/setup_pcluster_slurm.md](slurm/setup_pcluster_slurm.md): instructions to set up an AWS cluster
     * [slurm/config.yaml.template](slurm/config.yaml.template): configuration to set up an AWS cluster
     * [slurm/sbatch_run.sh](slurm/sbatch_run.sh): slurm script to launch the training job
+## Installation
+```
+pip install -r requirements.txt
+```
+## Running Examples
+For running the examples to run for 20 Epochs and save checkpoints every 5 Epochs, you can use the following command:
+### Single GPU
+```
+python single_gpu.py 20 5
+```
+### Multi-GPU
+```
+python multigpu.py 20 5
+```
+### Multi-GPU Torchrun
+```
+torchrun --nnodes=1 --nproc_per_node=4 multigpu_torchrun.py 20 5
+```
+### Multi-Node
+```
+torchrun --nnodes=2 --nproc_per_node=4  multinode.py 20 5
+```
 
-
-
-
+For more details, check the [run_examples.sh](distributed/ddp-tutorial-series/run_examples.sh) script.

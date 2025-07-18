@@ -50,12 +50,20 @@ function distributed_tensor_parallelism() {
     uv run bash run_example.sh fsdp_tp_example.py || error "2D parallel example failed"
 }
 
+function distributed_ddp-tutorial-series() {
+    uv python multigpu.py 10 1 || error "ddp tutorial series multigpu example failed"
+    uv run bash run_example.sh multigpu_torchrun.py || error "ddp tutorial series multigpu torchrun example failed"
+    uv run bash run_example.sh multinode.py || error "ddp tutorial series multinode example failed"
+    uv python single_gpu.py 10 1 || error "ddp tutorial series single gpu example failed"
+}
+
 function distributed_ddp() {
     uv run main.py || error "ddp example failed"
 }
 
 function run_all() {
   run distributed/tensor_parallelism
+  run distributed/ddp-tutorial-series
   run distributed/ddp
 }
 

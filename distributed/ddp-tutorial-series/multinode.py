@@ -11,8 +11,17 @@ import os
 
 
 def ddp_setup():
-    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
-    init_process_group(backend="nccl")
+    rank = int(os.environ["LOCAL_RANK"])
+    if torch.accelerator.is_available():
+        device = torch.device(f"{torch.accelerator.current_accelerator()}:{rank}")
+        torch.accelerator.set_device_index(rank)
+        print(f"Running on rank {rank} on device {device}")
+    else:
+        print(f"Multi-GPU environment not detected")
+
+    backend = torch.distributed.get_default_backend_for_device(rank)
+    torch.distributed.init_process_group(backend=backend, rank=rank, device_id=rank)
+
 
 class Trainer:
     def __init__(
@@ -38,7 +47,7 @@ class Trainer:
         self.model = DDP(self.model, device_ids=[self.local_rank])
 
     def _load_snapshot(self, snapshot_path):
-        loc = f"cuda:{self.local_rank}"
+        loc = str(torch.accelerator.current_accelerator())
         snapshot = torch.load(snapshot_path, map_location=loc)
         self.model.load_state_dict(snapshot["MODEL_STATE"])
         self.epochs_run = snapshot["EPOCHS_RUN"]
@@ -104,8 +113,8 @@ def main(save_every: int, total_epochs: int, batch_size: int, snapshot_path: str
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='simple distributed training job')
-    parser.add_argument('total_epochs', type=int, help='Total epochs to train the model')
-    parser.add_argument('save_every', type=int, help='How often to save a snapshot')
+    parser.add_argument('total_epochs', default=50, type=int, help='Total epochs to train the model')
+    parser.add_argument('save_every', default=5, type=int, help='How often to save a snapshot')
     parser.add_argument('--batch_size', default=32, type=int, help='Input batch size on each device (default: 32)')
     args = parser.parse_args()
 

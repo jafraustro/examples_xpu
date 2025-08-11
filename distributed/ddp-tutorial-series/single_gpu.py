@@ -78,5 +78,5 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', default=32, type=int, help='Input batch size on each device (default: 32)')
     args = parser.parse_args()
     
-    device = 0  # shorthand for cuda:0
+    device = 0  
     main(device, args.total_epochs, args.save_every, args.batch_size)

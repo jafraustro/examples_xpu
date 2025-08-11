@@ -51,9 +51,10 @@ function distributed_tensor_parallelism() {
 }
 
 function distributed_ddp-tutorial-series() {
-    uv run bash run_example.sh multigpu.py || error "ddp tutorial series multigpu example failed"
+    uv python multigpu.py 10 1 || error "ddp tutorial series multigpu example failed"
     uv run bash run_example.sh multigpu_torchrun.py || error "ddp tutorial series multigpu torchrun example failed"
     uv run bash run_example.sh multinode.py || error "ddp tutorial series multinode example failed"
+    uv python single_gpu.py 10 1 || error "ddp tutorial series single gpu example failed"
 }
 
 function distributed_ddp() {

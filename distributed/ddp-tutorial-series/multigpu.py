@@ -19,14 +19,10 @@ def ddp_setup(rank, world_size):
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "12355"
 
-    rank = int(os.environ["LOCAL_RANK"])
     if torch.accelerator.is_available():       
         device = torch.device(f"{torch.accelerator.current_accelerator()}:{rank}")
         torch.accelerator.set_device_index(rank)
         print(f"Running on rank {rank} on device {device}")
-    else:
-        device = torch.device("cpu")
-        print(f"Running on device {device}")
     
     backend = torch.distributed.get_default_backend_for_device(device)
     init_process_group(backend=backend, rank=rank, world_size=world_size)

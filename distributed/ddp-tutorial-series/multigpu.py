@@ -19,10 +19,9 @@ def ddp_setup(rank, world_size):
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "12355"
 
-    if torch.accelerator.is_available():       
-        device = torch.device(f"{torch.accelerator.current_accelerator()}:{rank}")
-        torch.accelerator.set_device_index(rank)
-        print(f"Running on rank {rank} on device {device}")
+    device = torch.device(f"{torch.accelerator.current_accelerator()}:{rank}")
+    torch.accelerator.set_device_index(rank)
+    print(f"Running on rank {rank} on device {device}")
     
     backend = torch.distributed.get_default_backend_for_device(device)
     init_process_group(backend=backend, rank=rank, world_size=world_size)
@@ -101,8 +100,8 @@ def main(rank: int, world_size: int, save_every: int, total_epochs: int, batch_s
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='simple distributed training job')
-    parser.add_argument('total_epochs', type=int, help='Total epochs to train the model')
-    parser.add_argument('save_every', type=int, help='How often to save a snapshot')
+    parser.add_argument('total_epochs', default=50, type=int, help='Total epochs to train the model')
+    parser.add_argument('save_every', default=5, type=int, help='How often to save a snapshot')
     parser.add_argument('--batch_size', default=32, type=int, help='Input batch size on each device (default: 32)')
     args = parser.parse_args()
 

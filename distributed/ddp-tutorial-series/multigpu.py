@@ -26,6 +26,7 @@ def ddp_setup(rank, world_size):
     backend = torch.distributed.get_default_backend_for_device(device)
     init_process_group(backend=backend, rank=rank, world_size=world_size)
 
+
 class Trainer:
     def __init__(
         self,

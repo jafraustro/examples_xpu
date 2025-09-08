@@ -29,6 +29,7 @@ class Trainer:
         optimizer: torch.optim.Optimizer,
         save_every: int,
         snapshot_path: str,
+        device 
     ) -> None:
         self.gpu_id = int(os.environ["LOCAL_RANK"])
         self.model = model.to(self.gpu_id)
@@ -37,6 +38,7 @@ class Trainer:
         self.save_every = save_every
         self.epochs_run = 0
         self.snapshot_path = snapshot_path
+        self.device = device
         if os.path.exists(snapshot_path):
             print("Loading snapshot")
             self._load_snapshot(snapshot_path)
@@ -44,7 +46,9 @@ class Trainer:
         self.model = DDP(self.model, device_ids=[self.gpu_id])
 
     def _load_snapshot(self, snapshot_path):
+
         loc = str(torch.accelerator.current_accelerator())
+
         snapshot = torch.load(snapshot_path, map_location=loc)
         self.model.load_state_dict(snapshot["MODEL_STATE"])
         self.epochs_run = snapshot["EPOCHS_RUN"]
@@ -99,10 +103,10 @@ def prepare_dataloader(dataset: Dataset, batch_size: int):
 
 
 def main(save_every: int, total_epochs: int, batch_size: int, snapshot_path: str = "snapshot.pt"):
-    ddp_setup()
+    device = ddp_setup()
     dataset, model, optimizer = load_train_objs()
     train_data = prepare_dataloader(dataset, batch_size)
-    trainer = Trainer(model, train_data, optimizer, save_every, snapshot_path)
+    trainer = Trainer(model, train_data, optimizer, save_every, snapshot_path, device)
     trainer.train(total_epochs)
     destroy_process_group()
 

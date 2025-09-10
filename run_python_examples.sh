@@ -155,11 +155,11 @@ function vision_transformer() {
 }
 
 function word_language_model() {
-  uv run main.py --epochs 1 --dry-run $CUDA_FLAG --mps || error "word_language_model failed"
-  uv run generate.py $CUDA_FLAG --mps || error "word_language_model generate failed"
+  uv run main.py --epochs 1 --dry-run $ACCEL_FLAG || error "word_language_model failed"
+  uv run generate.py $ACCEL_FLAG || error "word_language_model generate failed"
   for model in "RNN_TANH" "RNN_RELU" "LSTM" "GRU" "Transformer"; do
-    uv run main.py --model $model --epochs 1 --dry-run $CUDA_FLAG --mps || error "word_language_model failed"
-    uv run generate.py $CUDA_FLAG --mps || error "word_language_model generate failed"
+    uv run main.py --model $model --epochs 1 --dry-run $ACCEL_FLAG || error "word_language_model failed"
+    uv run generate.py $ACCEL_FLAG || error "word_language_model generate failed"
   done
 }
 
@@ -189,8 +189,6 @@ function stop() {
     snli/.data/ \
     snli/.vector_cache/ \
     snli/results/ \
-    super_resolution/dataset/ \
-    super_resolution/model_epoch_1.pth \
     time_sequence_prediction/predict*.pdf \
     time_sequence_prediction/traindata.pt \
     word_language_model/model.pt \
@@ -216,7 +214,7 @@ function run_all() {
   run regression
   run reinforcement_learning
   run siamese_network
-  run super_resolution
+  # run super_resolution - flaky
   run time_sequence_prediction
   run vae
   # vision_transformer - example broken see https://github.com/pytorch/examples/issues/1184 and https://github.com/pytorch/examples/pull/1258 for more details

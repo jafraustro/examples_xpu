@@ -37,10 +37,6 @@ parser.add_argument('--tied', action='store_true',
                     help='tie the word embedding and softmax weights')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
-parser.add_argument('--cuda', action='store_true', default=False,
-                    help='use CUDA')
-parser.add_argument('--mps', action='store_true', default=False,
-                        help='enables macOS GPU training')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
 parser.add_argument('--save', type=str, default='model.pt',
@@ -51,24 +47,22 @@ parser.add_argument('--nhead', type=int, default=2,
                     help='the number of heads in the encoder/decoder of the transformer model')
 parser.add_argument('--dry-run', action='store_true',
                     help='verify the code and the model')
+parser.add_argument('--accel', action='store_true',
+                    help='Enables accelerated training')
+parser.add_argument('--use-optimizer', action='store_true',
+                    help='Uses AdamW optimizer for gradient updating')
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
-if torch.cuda.is_available():
-    if not args.cuda:
-        print("WARNING: You have a CUDA device, so you should probably run with --cuda.")
-if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-    if not args.mps:
-        print("WARNING: You have mps device, to enable macOS GPU run with --mps.")
 
-use_mps = args.mps and torch.backends.mps.is_available()
-if args.cuda:
-    device = torch.device("cuda")
-elif use_mps:
-    device = torch.device("mps")
+if args.accel and torch.accelerator.is_available():
+    device = torch.accelerator.current_accelerator()
+
 else:
     device = torch.device("cpu")
+
+print("Using device:", device)
 
 ###############################################################################
 # Load data
@@ -113,6 +107,8 @@ else:
     model = RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied).to(device)
 
 criterion = nn.NLLLoss()
+if args.use_optimizer:
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
 
 ###############################################################################
 # Training code
@@ -176,7 +172,10 @@ def train():
         data, targets = get_batch(train_data, i)
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
-        model.zero_grad()
+        if args.use_optimizer:
+            optimizer.zero_grad()
+        else:
+            model.zero_grad()
         if args.model == 'Transformer':
             output = model(data)
             output = output.view(-1, ntokens)
@@ -188,8 +187,11 @@ def train():
 
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-        for p in model.parameters():
-            p.data.add_(p.grad, alpha=-lr)
+        if args.use_optimizer:
+            optimizer.step()
+        else:
+            for p in model.parameters():
+                p.data.add_(p.grad, alpha=-lr)
 
         total_loss += loss.item()
 
